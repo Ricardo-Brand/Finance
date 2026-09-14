@@ -3,7 +3,15 @@ import sqlite3
 import uuid
 from datetime import datetime
 
-from flask import Flask, g, render_template, request, redirect, url_for, abort
+from flask import (
+    Flask,
+    g,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    abort,
+)
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -135,6 +143,21 @@ def init_db():
         )
 
     # --------------------------------------------------------
+    # Status de pagamento
+    #
+    # 0 = não pago
+    # 1 = pago
+    # --------------------------------------------------------
+
+    if "paid" not in columns:
+        db.execute(
+            """
+            ALTER TABLE items
+            ADD COLUMN paid INTEGER NOT NULL DEFAULT 0
+            """
+        )
+
+    # --------------------------------------------------------
     # Cartão Inter inicial
     #
     # Se nenhum cartão existir, cria automaticamente o Inter.
@@ -212,6 +235,94 @@ def parse_amount(value):
 
 
 # ============================================================
+# PAGAMENTOS
+# ============================================================
+
+def month_payment_status(year, month):
+    """
+    Determina se todas as contas relevantes do mês estão pagas.
+
+    São considerados:
+    - contas fixas;
+    - contas variáveis;
+    - contas A receber;
+    - faturas com valor maior que zero.
+
+    Compras vinculadas a uma fatura NÃO são consideradas
+    separadamente, pois o pagamento delas é representado
+    pela própria fatura.
+
+    Faturas vazias, com valor igual a zero, não são
+    consideradas no status do mês.
+
+    Um mês sem nenhuma conta não é considerado pago.
+    """
+
+    db = get_db()
+
+    result = db.execute(
+        """
+        SELECT
+            COUNT(*) AS total,
+
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN paid = 1 THEN 1
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS paid_count
+
+        FROM items
+
+        WHERE year = ?
+          AND month = ?
+
+          AND (
+              (
+                  invoice_id IS NULL
+                  AND is_invoice = 0
+              )
+
+              OR
+
+              (
+                  is_invoice = 1
+                  AND amount > 0
+              )
+          )
+        """,
+        (
+            year,
+            month,
+        ),
+    ).fetchone()
+
+    total = result["total"] or 0
+    paid_count = result["paid_count"] or 0
+    pending_count = total - paid_count
+
+    is_paid = (
+        total > 0
+        and pending_count == 0
+    )
+
+    return {
+        "total": total,
+        "paid_count": paid_count,
+        "pending_count": pending_count,
+
+        # Nome utilizado pelas rotas existentes.
+        "paid": is_paid,
+
+        # Nome utilizado pelo month.html.
+        "is_paid": is_paid,
+    }
+
+
+# ============================================================
 # CARTÕES
 # ============================================================
 
@@ -285,7 +396,6 @@ def create_invoice(
 
     A fatura é armazenada como um item especial.
     Ela entra no cálculo financeiro.
-
     As compras vinculadas a ela não entram novamente.
     """
 
@@ -323,12 +433,13 @@ def create_invoice(
             card_id,
             invoice_id,
             is_invoice,
-            estimated
+            estimated,
+            paid
         )
         VALUES (
             ?, ?, ?, ?, 'fixa',
             NULL, NULL, NULL, ?,
-            NULL, ?, NULL, 1, ?
+            NULL, ?, NULL, 1, ?, 0
         )
         """,
         (
@@ -390,6 +501,9 @@ def add_amount_to_invoice(
     Adiciona uma parcela à fatura.
 
     Se a fatura não existir, ela é criada automaticamente.
+
+    Ao adicionar uma nova compra, a fatura volta para
+    pendente caso estivesse anteriormente marcada como paga.
     """
 
     if not card_id or amount <= 0:
@@ -407,7 +521,9 @@ def add_amount_to_invoice(
     db.execute(
         """
         UPDATE items
-        SET amount = amount + ?
+        SET
+            amount = amount + ?,
+            paid = 0
         WHERE id = ?
         """,
         (
@@ -464,10 +580,16 @@ def remove_amount_from_invoice(
     db.execute(
         """
         UPDATE items
-        SET amount = ?
+        SET
+            amount = ?,
+            paid = CASE
+                WHEN ? <= 0 THEN 0
+                ELSE paid
+            END
         WHERE id = ?
         """,
         (
+            new_amount,
             new_amount,
             invoice_id,
         ),
@@ -483,7 +605,9 @@ def update_invoice_amount(
     """
     Altera manualmente o valor da fatura.
 
-    Ao fazer isso, ela deixa de ser uma previsão.
+    Ao fazer isso, ela deixa de ser uma previsão
+    e volta para pendente, pois o valor da obrigação
+    foi alterado.
     """
 
     db = get_db()
@@ -493,7 +617,8 @@ def update_invoice_amount(
         UPDATE items
         SET
             amount = ?,
-            estimated = 0
+            estimated = 0,
+            paid = 0
         WHERE id = ?
           AND is_invoice = 1
         """,
@@ -559,8 +684,7 @@ def fetch_month_invoices(year, month):
           AND items.is_invoice = 1
 
         ORDER BY items.id
-        """
-        ,
+        """,
         (
             year,
             month,
@@ -636,11 +760,17 @@ def index():
             month,
         )
 
+        payment_status = month_payment_status(
+            year,
+            month,
+        )
+
         months.append(
             {
                 "month": month,
                 "name": month_name(month),
                 "totals": totals,
+                "payment_status": payment_status,
             }
         )
 
@@ -677,6 +807,11 @@ def month_view(year, month):
 
     cards = get_cards()
 
+    payment_status = month_payment_status(
+        year,
+        month,
+    )
+
     return render_template(
         "month.html",
         year=year,
@@ -686,6 +821,7 @@ def month_view(year, month):
         invoices=invoices,
         cards=cards,
         totals=totals,
+        payment_status=payment_status,
     )
 
 
@@ -734,6 +870,15 @@ def new_item(year, month):
         "card_id",
         type=int,
     )
+    
+    if parcelado and not card_id:
+        return redirect(
+            url_for(
+                "month_view",
+                year=year,
+                month=month,
+            )
+        )
 
     if not name or amount <= 0:
         return redirect(
@@ -750,11 +895,10 @@ def new_item(year, month):
 
     # Se marcou parcelado mas não escolheu cartão,
     # ainda permitimos cadastrar como parcelamento normal.
-    if parcelado and parcelas > 1:
+    if parcelado and parcelas >= 1:
         group_id = str(uuid.uuid4())
 
         db = get_db()
-
         now = datetime.now().isoformat()
 
         for i in range(parcelas):
@@ -786,7 +930,9 @@ def new_item(year, month):
                 db.execute(
                     """
                     UPDATE items
-                    SET amount = amount + ?
+                    SET
+                        amount = amount + ?,
+                        paid = 0
                     WHERE id = ?
                     """,
                     (
@@ -817,12 +963,13 @@ def new_item(year, month):
                     card_id,
                     invoice_id,
                     is_invoice,
-                    estimated
+                    estimated,
+                    paid
                 )
                 VALUES (
                     ?, ?, ?, ?, ?,
                     ?, ?, ?, ?,
-                    ?, ?, ?, 0, 0
+                    ?, ?, ?, 0, 0, 0
                 )
                 """,
                 (
@@ -845,7 +992,6 @@ def new_item(year, month):
 
     else:
         db = get_db()
-
         now = datetime.now().isoformat()
 
         db.execute(
@@ -864,12 +1010,13 @@ def new_item(year, month):
                 card_id,
                 invoice_id,
                 is_invoice,
-                estimated
+                estimated,
+                paid
             )
             VALUES (
                 ?, ?, ?, ?, ?,
                 NULL, NULL, NULL, ?,
-                ?, NULL, NULL, 0, 0
+                ?, NULL, NULL, 0, 0, 0
             )
             """,
             (
@@ -884,6 +1031,116 @@ def new_item(year, month):
         )
 
         db.commit()
+
+    return redirect(
+        url_for(
+            "month_view",
+            year=year,
+            month=month,
+        )
+    )
+
+
+# ============================================================
+# PAGAR / DESPAGAR ITEM
+# ============================================================
+
+@app.route(
+    "/item/<int:item_id>/toggle-pago",
+    methods=["POST"],
+)
+def toggle_item_paid(item_id):
+    db = get_db()
+
+    item = db.execute(
+        """
+        SELECT *
+        FROM items
+        WHERE id = ?
+        """,
+        (item_id,),
+    ).fetchone()
+
+    if item is None:
+        abort(404)
+
+    new_paid = 0 if item["paid"] else 1
+
+    db.execute(
+        """
+        UPDATE items
+        SET paid = ?
+        WHERE id = ?
+        """,
+        (
+            new_paid,
+            item_id,
+        ),
+    )
+
+    db.commit()
+
+    return redirect(
+        url_for(
+            "month_view",
+            year=item["year"],
+            month=item["month"],
+        )
+    )
+
+
+# ============================================================
+# PAGAR / DESPAGAR MÊS
+# ============================================================
+
+@app.route(
+    "/mes/<int:year>/<int:month>/toggle-pago",
+    methods=["POST"],
+)
+def toggle_month_paid(year, month):
+    if month < 1 or month > 12:
+        abort(404)
+
+    db = get_db()
+
+    status = month_payment_status(
+        year,
+        month,
+    )
+
+    new_paid = 0 if status["paid"] else 1
+
+    db.execute(
+        """
+        UPDATE items
+
+        SET paid = ?
+
+        WHERE year = ?
+          AND month = ?
+
+          AND (
+              (
+                  invoice_id IS NULL
+                  AND is_invoice = 0
+              )
+
+              OR
+
+              (
+                  is_invoice = 1
+                  AND amount > 0
+              )
+          )
+        """,
+        (
+            new_paid,
+            year,
+            month,
+        ),
+    )
+
+    db.commit()
 
     return redirect(
         url_for(
@@ -1007,7 +1264,9 @@ def edit_item(item_id):
                     db.execute(
                         """
                         UPDATE items
-                        SET amount = ?
+                        SET
+                            amount = ?,
+                            paid = 0
                         WHERE id = ?
                         """,
                         (
@@ -1242,12 +1501,13 @@ def replicate_item(item_id):
                 card_id,
                 invoice_id,
                 is_invoice,
-                estimated
+                estimated,
+                paid
             )
             VALUES (
                 ?, ?, ?, ?, ?,
                 NULL, NULL, NULL, ?,
-                ?, NULL, NULL, 0, 0
+                ?, NULL, NULL, 0, 0, 0
             )
             """,
             (
@@ -1324,7 +1584,8 @@ def bulk_replicate_select():
     db = get_db()
 
     placeholders = ",".join(
-        "?" for _ in item_ids
+        "?"
+        for _ in item_ids
     )
 
     items = db.execute(
@@ -1332,7 +1593,7 @@ def bulk_replicate_select():
         SELECT *
         FROM items
         WHERE id IN ({placeholders})
-        AND is_invoice = 0
+          AND is_invoice = 0
         """,
         item_ids,
     ).fetchall()
@@ -1385,7 +1646,8 @@ def bulk_replicate_confirm():
         db = get_db()
 
         placeholders = ",".join(
-            "?" for _ in item_ids
+            "?"
+            for _ in item_ids
         )
 
         items = db.execute(
@@ -1393,7 +1655,7 @@ def bulk_replicate_confirm():
             SELECT *
             FROM items
             WHERE id IN ({placeholders})
-            AND is_invoice = 0
+              AND is_invoice = 0
             """,
             item_ids,
         ).fetchall()
@@ -1422,12 +1684,13 @@ def bulk_replicate_confirm():
                         card_id,
                         invoice_id,
                         is_invoice,
-                        estimated
+                        estimated,
+                        paid
                     )
                     VALUES (
                         ?, ?, ?, ?, ?,
                         NULL, NULL, NULL, ?,
-                        ?, NULL, NULL, 0, 0
+                        ?, NULL, NULL, 0, 0, 0
                     )
                     """,
                     (
@@ -1497,7 +1760,56 @@ def new_card():
         request.referrer
         or url_for("index")
     )
+    
+    
+@app.route(
+    "/cartoes/<int:card_id>/excluir",
+    methods=["POST"],
+)
+def delete_card(card_id):
+    db = get_db()
 
+    card = db.execute(
+        """
+        SELECT *
+        FROM cards
+        WHERE id = ?
+        """,
+        (card_id,),
+    ).fetchone()
+
+    if card is None:
+        abort(404)
+
+    usage = db.execute(
+        """
+        SELECT COUNT(*) AS total
+        FROM items
+        WHERE card_id = ?
+        """,
+        (card_id,),
+    ).fetchone()
+
+    if usage["total"] > 0:
+        return redirect(
+            request.referrer
+            or url_for("index")
+        )
+
+    db.execute(
+        """
+        DELETE FROM cards
+        WHERE id = ?
+        """,
+        (card_id,),
+    )
+
+    db.commit()
+
+    return redirect(
+        request.referrer
+        or url_for("index")
+    )
 
 # ============================================================
 # EDITAR FATURA
@@ -1515,9 +1827,12 @@ def edit_invoice(invoice_id):
         SELECT
             items.*,
             cards.name AS card_name
+
         FROM items
+
         JOIN cards
             ON cards.id = items.card_id
+
         WHERE items.id = ?
           AND items.is_invoice = 1
         """,
@@ -1560,6 +1875,7 @@ if __name__ == "__main__":
     init_db()
 
     app.run(
+        host="127.0.0.1",
+        port=8080,
         debug=True,
-        port=5000,
     )

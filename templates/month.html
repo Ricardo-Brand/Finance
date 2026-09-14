@@ -15,7 +15,70 @@
       &#8592; {{ year }}
     </a>
 
-    <h1>{{ month_name }} de {{ year }}</h1>
+    <div class="month-title-row">
+
+      <div>
+
+        <h1>{{ month_name }} de {{ year }}</h1>
+
+        {% if payment_status.total > 0 %}
+
+          {% if payment_status.is_paid %}
+
+            <span class="payment-status payment-status-paid">
+              ✓ Mês pago
+            </span>
+
+          {% else %}
+
+            <span class="payment-status payment-status-pending">
+              ● Mês pendente
+            </span>
+
+          {% endif %}
+
+        {% else %}
+
+          <span class="payment-status payment-status-empty">
+            Nenhum lançamento
+          </span>
+
+        {% endif %}
+
+      </div>
+
+      {% if payment_status.total > 0 %}
+
+        <form
+          method="post"
+          action="{{ url_for('toggle_month_paid', year=year, month=month) }}"
+        >
+
+          {% if payment_status.is_paid %}
+
+            <button
+              type="submit"
+              class="btn payment-btn payment-btn-pending"
+            >
+              Marcar mês como pendente
+            </button>
+
+          {% else %}
+
+            <button
+              type="submit"
+              class="btn payment-btn payment-btn-paid"
+            >
+              Marcar mês como pago
+            </button>
+
+          {% endif %}
+
+        </form>
+
+      {% endif %}
+
+    </div>
 
   </div>
 
@@ -44,25 +107,40 @@
 
               <div class="invoice-status">
 
+                {% if invoice.paid %}
+
+                  <span class="badge badge-positive">
+                    Paga
+                  </span>
+
+                {% else %}
+
+                  <span class="badge badge-negative">
+                    Pendente
+                  </span>
+
+                {% endif %}
+
                 {% if invoice.estimated %}
+
                   <span class="badge badge-warning">
                     Previsão
                   </span>
+
                 {% else %}
+
                   <span class="badge badge-positive">
                     Confirmada
                   </span>
+
                 {% endif %}
 
               </div>
 
             </div>
 
-
             <div class="invoice-value">
-
               {{ invoice.amount | brl }}
-
             </div>
 
           </div>
@@ -76,6 +154,34 @@
             >
               Alterar fatura
             </a>
+
+            <form
+              method="post"
+              action="{{ url_for('toggle_item_paid', item_id=invoice.id) }}"
+              class="inline-form"
+            >
+
+              {% if invoice.paid %}
+
+                <button
+                  type="submit"
+                  class="btn btn-small payment-btn payment-btn-pending"
+                >
+                  Marcar como pendente
+                </button>
+
+              {% else %}
+
+                <button
+                  type="submit"
+                  class="btn btn-small payment-btn payment-btn-paid"
+                >
+                  Marcar como paga
+                </button>
+
+              {% endif %}
+
+            </form>
 
           </div>
 
@@ -142,23 +248,21 @@
         <tr>
 
           <th>
+
             <input
               type="checkbox"
               id="select-all"
               aria-label="Selecionar todas"
             >
+
           </th>
 
           <th>Nome</th>
-
           <th>Tipo</th>
-
           <th>Valor</th>
-
           <th>Parcela</th>
-
           <th>Cartão</th>
-
+          <th>Status</th>
           <th>Ações</th>
 
         </tr>
@@ -291,6 +395,73 @@
               </td>
 
 
+              <!-- ================================================= -->
+              <!-- STATUS DO ITEM                                    -->
+              <!-- ================================================= -->
+
+              <td>
+
+                {% if item.type == 'receber' %}
+
+                  {% if item.paid %}
+
+                    <button
+                      type="submit"
+                      formaction="{{ url_for('toggle_item_paid', item_id=item.id) }}"
+                      class="status-button status-button-paid"
+                      title="Clique para marcar como não recebido"
+                    >
+                      ✓ Recebido
+                    </button>
+
+                  {% else %}
+
+                    <button
+                      type="submit"
+                      formaction="{{ url_for('toggle_item_paid', item_id=item.id) }}"
+                      class="status-button status-button-pending"
+                      title="Clique para marcar como recebido"
+                    >
+                      Não recebido
+                    </button>
+
+                  {% endif %}
+
+                {% else %}
+
+                  {% if item.paid %}
+
+                    <button
+                      type="submit"
+                      formaction="{{ url_for('toggle_item_paid', item_id=item.id) }}"
+                      class="status-button status-button-paid"
+                      title="Clique para marcar como pendente"
+                    >
+                      ✓ Pago
+                    </button>
+
+                  {% else %}
+
+                    <button
+                      type="submit"
+                      formaction="{{ url_for('toggle_item_paid', item_id=item.id) }}"
+                      class="status-button status-button-pending"
+                      title="Clique para marcar como pago"
+                    >
+                      Pendente
+                    </button>
+
+                  {% endif %}
+
+                {% endif %}
+
+              </td>
+
+
+              <!-- ================================================= -->
+              <!-- AÇÕES                                              -->
+              <!-- ================================================= -->
+
               <td class="row-actions">
 
                 <a
@@ -333,7 +504,7 @@
           <tr>
 
             <td
-              colspan="7"
+              colspan="8"
               class="empty-row"
             >
               Nenhum item cadastrado neste mês ainda.
@@ -406,7 +577,7 @@
     <div>
 
       <span class="label">
-        Saldo
+        Total
       </span>
 
       <span class="value">
@@ -543,7 +714,7 @@
           type="number"
           id="parcelas"
           name="parcelas"
-          min="2"
+          min="1"
           value="2"
         >
 
@@ -601,45 +772,96 @@
   </div>
 
 
-  <!-- ===================================================== -->
-  <!-- NOVO CARTÃO                                           -->
-  <!-- ===================================================== -->
+<!-- ===================================================== -->
+<!-- CARTÕES                                               -->
+<!-- ===================================================== -->
 
-  <div class="add-form-card card-form">
+<div class="add-form-card card-form">
 
-    <h2>Adicionar cartão</h2>
+  <h2>Cartões</h2>
 
-    <form
-      method="post"
-      action="{{ url_for('new_card') }}"
-      class="add-form"
-    >
+  {% if cards %}
 
-      <div class="form-row">
+    <div class="cards-list">
 
-        <label for="card-name">
-          Nome do cartão
-        </label>
+      {% for card in cards %}
 
-        <input
-          type="text"
-          id="card-name"
-          name="name"
-          placeholder="Ex: Nubank"
-          required
-        >
+        <div class="card-item">
 
-      </div>
+          <span class="badge badge-card">
+            {{ card.name }}
+          </span>
+
+          <form
+            method="post"
+            action="{{ url_for('delete_card', card_id=card.id) }}"
+            class="inline-form"
+          >
+
+            <button
+              type="submit"
+              class="btn btn-small"
+            >
+              Remover
+            </button>
+
+          </form>
+
+        </div>
+
+      {% endfor %}
+
+    </div>
+
+  {% else %}
+
+    <p class="muted">
+      Nenhum cartão cadastrado.
+    </p>
+
+  {% endif %}
+
+</div>
 
 
-      <button
-        type="submit"
-        class="btn"
+<!-- ===================================================== -->
+<!-- NOVO CARTÃO                                           -->
+<!-- ===================================================== -->
+
+<div class="add-form-card card-form">
+
+  <h2>Adicionar cartão</h2>
+
+  <form
+    method="post"
+    action="{{ url_for('new_card') }}"
+    class="add-form"
+  >
+
+    <div class="form-row">
+
+      <label for="card-name">
+        Nome do cartão
+      </label>
+
+      <input
+        type="text"
+        id="card-name"
+        name="name"
+        placeholder="Ex: Nubank"
+        required
       >
-        Adicionar cartão
-      </button>
 
-    </form>
+    </div>
+
+    <button
+      type="submit"
+      class="btn"
+    >
+      Adicionar cartão
+    </button>
+
+  </form>
 
   </div>
 

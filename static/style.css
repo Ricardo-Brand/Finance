@@ -13,7 +13,9 @@
   --radius: 10px;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
@@ -68,7 +70,9 @@ body {
   font-size: 14px;
 }
 
-.btn:hover { border-color: var(--accent); }
+.btn:hover {
+  border-color: var(--accent);
+}
 
 .btn-icon {
   width: 36px;
@@ -108,12 +112,21 @@ body {
   transition: border-color 0.15s ease;
 }
 
-.month-card:hover { border-color: var(--accent); }
+.month-card:hover {
+  border-color: var(--accent);
+}
+
+.month-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
 
 .month-card-name {
   font-weight: 600;
   font-size: 15px;
-  margin-bottom: 10px;
 }
 
 .month-card-row {
@@ -131,13 +144,39 @@ body {
   font-size: 15px;
 }
 
-.label { color: var(--ink-muted); }
+.label {
+  color: var(--ink-muted);
+}
 
-.value.negative, .negative { color: var(--negative); }
-.value.positive, .positive { color: var(--positive); }
+.value.negative,
+.negative {
+  color: var(--negative);
+}
+
+.value.positive,
+.positive {
+  color: var(--positive);
+}
 
 .month-header {
   margin-bottom: 24px;
+}
+
+.month-header h1 {
+  margin: 8px 0 0;
+  font-size: 24px;
+}
+
+.month-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 8px;
+}
+
+.month-title-row h1 {
+  margin: 0 0 8px;
 }
 
 .back-link {
@@ -146,9 +185,82 @@ body {
   font-size: 14px;
 }
 
-.month-header h1 {
-  margin: 8px 0 0;
-  font-size: 24px;
+/* ============================================================
+   STATUS DE PAGAMENTO
+   ============================================================ */
+
+.payment-status {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.payment-status-paid {
+  background: var(--positive-bg);
+  color: var(--positive);
+}
+
+.payment-status-pending {
+  background: var(--negative-bg);
+  color: var(--negative);
+}
+
+.payment-status-empty {
+  background: var(--bg);
+  color: var(--ink-muted);
+}
+
+.payment-btn {
+  white-space: nowrap;
+}
+
+.payment-btn-paid {
+  border-color: var(--positive);
+  color: var(--positive);
+}
+
+.payment-btn-paid:hover {
+  background: var(--positive-bg);
+}
+
+.payment-btn-pending {
+  border-color: var(--negative);
+  color: var(--negative);
+}
+
+.payment-btn-pending:hover {
+  background: var(--negative-bg);
+}
+
+.status-button {
+  display: inline-block;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-button-paid {
+  border-color: var(--positive);
+  background: var(--positive-bg);
+  color: var(--positive);
+}
+
+.status-button-pending {
+  border-color: var(--negative);
+  background: var(--negative-bg);
+  color: var(--negative);
+}
+
+.status-button:hover {
+  opacity: 0.8;
 }
 
 .items-table {
@@ -161,7 +273,8 @@ body {
   margin-bottom: 20px;
 }
 
-.items-table th, .items-table td {
+.items-table th,
+.items-table td {
   padding: 10px 14px;
   text-align: left;
   border-bottom: 1px solid var(--border);
@@ -177,7 +290,9 @@ body {
   letter-spacing: 0.03em;
 }
 
-.items-table tr:last-child td { border-bottom: none; }
+.items-table tr:last-child td {
+  border-bottom: none;
+}
 
 .empty-row {
   text-align: center;
@@ -192,18 +307,33 @@ body {
   font-size: 12px;
 }
 
-.badge-negative { background: var(--negative-bg); color: var(--negative); }
-.badge-positive { background: var(--positive-bg); color: var(--positive); }
-.badge-fixed { background: #EFE7D8; color: #8A5A15; }
+.badge-negative {
+  background: var(--negative-bg);
+  color: var(--negative);
+}
+
+.badge-positive {
+  background: var(--positive-bg);
+  color: var(--positive);
+}
+
+.badge-fixed {
+  background: #EFE7D8;
+  color: #8A5A15;
+}
 
 .row-actions {
   display: flex;
   gap: 6px;
 }
 
-.inline-form { display: inline; }
+.inline-form {
+  display: inline;
+}
 
-.muted { color: var(--ink-muted); }
+.muted {
+  color: var(--ink-muted);
+}
 
 .totals-bar {
   display: flex;
@@ -222,7 +352,10 @@ body {
   gap: 4px;
 }
 
-.totals-bar .value { font-size: 18px; font-weight: 600; }
+.totals-bar .value {
+  font-size: 18px;
+  font-weight: 600;
+}
 
 .add-form-card {
   background: var(--surface);
@@ -271,10 +404,19 @@ body {
   gap: 8px;
 }
 
-.checkbox-row input { width: 16px; height: 16px; }
-.checkbox-row label { font-size: 14px; color: var(--ink); }
+.checkbox-row input {
+  width: 16px;
+  height: 16px;
+}
 
-.hidden { display: none; }
+.checkbox-row label {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.hidden {
+  display: none;
+}
 
 .hint {
   font-size: 12px;
@@ -296,7 +438,10 @@ body {
   color: var(--ink);
 }
 
-.month-checkbox input { width: 14px; height: 14px; }
+.month-checkbox input {
+  width: 14px;
+  height: 14px;
+}
 
 .bulk-action-btn {
   margin-bottom: 24px;
@@ -316,7 +461,105 @@ body {
   min-width: 180px;
 }
 
+/* ============================================================
+   CARTÕES E FATURAS
+   ============================================================ */
+
+.invoices-section {
+  margin-bottom: 28px;
+}
+
+.invoices-section h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.invoice-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.invoice-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.invoice-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.invoice-status {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.invoice-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--negative);
+}
+
+.invoice-actions {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.invoice-items {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.invoice-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.badge-warning {
+  background: #F7EFD8;
+  color: #8A6515;
+}
+
+.badge-card {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.item-invoice-info {
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+.card-form {
+  margin-top: 16px;
+}
+
 @media (max-width: 760px) {
+
+  .month-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .month-title-row .payment-btn {
+    width: 100%;
+  }
+
   .items-table {
     display: block;
     overflow-x: auto;
@@ -329,134 +572,27 @@ body {
   .totals-bar {
     flex-direction: column;
   }
-}
 
-/* ============================================================
-   CARTÕES E FATURAS
-   ============================================================ */
-
-   .invoices-section {
-    margin-bottom: 28px;
-  }
-  
-  .invoices-section h2 {
-    margin: 0 0 12px;
-    font-size: 18px;
-  }
-  
-  
-  .invoice-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 12px;
-  }
-  
-  
   .invoice-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    align-items: flex-start;
   }
-  
-  
-  .invoice-name {
-    font-size: 16px;
-    font-weight: 600;
-  }
-  
-  
-  .invoice-status {
-    margin-top: 6px;
-  }
-  
-  
+
   .invoice-value {
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--negative);
+    font-size: 17px;
   }
-  
-  
-  .invoice-actions {
-    margin-top: 12px;
-  }
-  
-  
-  .invoice-items {
-    margin-top: 14px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border);
-  }
-  
-  
+
   .invoice-item {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 6px 0;
-    font-size: 13px;
-    color: var(--ink-muted);
+    flex-direction: column;
+    gap: 2px;
   }
-  
-  
-  .badge-warning {
-    background: #F7EFD8;
-    color: #8A6515;
+
+  .invoice-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
-  
-  
-  .badge-card {
-    background: var(--accent-bg);
-    color: var(--accent);
+
+  .invoice-actions .btn {
+    text-align: center;
   }
-  
-  
-  .item-invoice-info {
-    margin-top: 5px;
-    font-size: 11px;
-    color: var(--ink-muted);
-  }
-  
-  
-  .purchase-link {
-    margin-top: 6px;
-  }
-  
-  
-  .card-form {
-    margin-top: 16px;
-  }
-  
-  
-  @media (max-width: 760px) {
-  
-    .invoice-header {
-      align-items: flex-start;
-    }
-  
-    .invoice-value {
-      font-size: 17px;
-    }
-  
-    .invoice-item {
-      flex-direction: column;
-      gap: 2px;
-    }
-  
-    .items-table {
-      display: block;
-      overflow-x: auto;
-    }
-  
-    .row-actions {
-      flex-wrap: wrap;
-    }
-  
-    .totals-bar {
-      flex-direction: column;
-    }
-  
-  }
+
+}
