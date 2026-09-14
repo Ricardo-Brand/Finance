@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}
+  Editar fatura
+{% endblock %}
+
+{% block content %}
+
+  <div class="month-header">
+
+    <a
+      class="back-link"
+      href="{{ url_for('month_view', year=invoice.year, month=invoice.month) }}"
+    >
+      &#8592; Voltar
+    </a>
+
+    <h1>
+      Fatura {{ invoice.card_name }}
+    </h1>
+
+  </div>
+
+
+  <div class="add-form-card">
+
+    <p class="hint">
+
+      O valor atual é:
+
+      <strong>
+        {{ invoice.amount | brl }}
+      </strong>
+
+      {% if invoice.estimated %}
+
+        <span class="badge badge-warning">
+          Previsão
+        </span>
+
+      {% else %}
+
+        <span class="badge badge-positive">
+          Confirmada
+        </span>
+
+      {% endif %}
+
+    </p>
+
+
+    <form
+      method="post"
+      class="add-form"
+    >
+
+      <div class="form-row">
+
+        <label for="amount">
+          Valor real da fatura
+        </label>
+
+        <input
+          type="text"
+          id="amount"
+          name="amount"
+          value="{{ '%.2f' | format(invoice.amount) }}"
+          required
+        >
+
+      </div>
+
+
+      <span class="hint">
+
+        Ao salvar, a fatura passa de previsão para confirmada.
+
+        As compras parceladas vinculadas continuam iguais.
+
+      </span>
+
+
+      <button
+        type="submit"
+        class="btn btn-primary"
+      >
+        Confirmar fatura
+      </button>
+
+    </form>
+
+  </div>
+
+{% endblock %}

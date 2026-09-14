@@ -301,3 +301,162 @@ body {
 .bulk-action-btn {
   margin-bottom: 24px;
 }
+
+.purchase-link {
+  margin-top: 6px;
+}
+
+.badge-included {
+  background: #EEE9F7;
+  color: #654A91;
+}
+
+.items-table th:last-child,
+.items-table td:last-child {
+  min-width: 180px;
+}
+
+@media (max-width: 760px) {
+  .items-table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .row-actions {
+    flex-wrap: wrap;
+  }
+
+  .totals-bar {
+    flex-direction: column;
+  }
+}
+
+/* ============================================================
+   CARTÕES E FATURAS
+   ============================================================ */
+
+   .invoices-section {
+    margin-bottom: 28px;
+  }
+  
+  .invoices-section h2 {
+    margin: 0 0 12px;
+    font-size: 18px;
+  }
+  
+  
+  .invoice-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  
+  
+  .invoice-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  
+  
+  .invoice-name {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  
+  
+  .invoice-status {
+    margin-top: 6px;
+  }
+  
+  
+  .invoice-value {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--negative);
+  }
+  
+  
+  .invoice-actions {
+    margin-top: 12px;
+  }
+  
+  
+  .invoice-items {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  
+  
+  .invoice-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 6px 0;
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+  
+  
+  .badge-warning {
+    background: #F7EFD8;
+    color: #8A6515;
+  }
+  
+  
+  .badge-card {
+    background: var(--accent-bg);
+    color: var(--accent);
+  }
+  
+  
+  .item-invoice-info {
+    margin-top: 5px;
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+  
+  
+  .purchase-link {
+    margin-top: 6px;
+  }
+  
+  
+  .card-form {
+    margin-top: 16px;
+  }
+  
+  
+  @media (max-width: 760px) {
+  
+    .invoice-header {
+      align-items: flex-start;
+    }
+  
+    .invoice-value {
+      font-size: 17px;
+    }
+  
+    .invoice-item {
+      flex-direction: column;
+      gap: 2px;
+    }
+  
+    .items-table {
+      display: block;
+      overflow-x: auto;
+    }
+  
+    .row-actions {
+      flex-wrap: wrap;
+    }
+  
+    .totals-bar {
+      flex-direction: column;
+    }
+  
+  }

@@ -1,123 +1,756 @@
 {% extends "base.html" %}
-{% block title %}{{ month_name }} {{ year }} · Planejador Financeiro{% endblock %}
+
+{% block title %}
+  {{ month_name }} {{ year }} · Planejador Financeiro
+{% endblock %}
+
 {% block content %}
+
   <div class="month-header">
-    <a class="back-link" href="{{ url_for('index', ano=year) }}">&#8592; {{ year }}</a>
+
+    <a
+      class="back-link"
+      href="{{ url_for('index', ano=year) }}"
+    >
+      &#8592; {{ year }}
+    </a>
+
     <h1>{{ month_name }} de {{ year }}</h1>
+
   </div>
 
-  <form method="post" action="{{ url_for('bulk_replicate_select') }}">
-    <input type="hidden" name="origin_year" value="{{ year }}">
-    <input type="hidden" name="origin_month" value="{{ month }}">
+
+  <!-- ===================================================== -->
+  <!-- FATURAS                                               -->
+  <!-- ===================================================== -->
+
+  {% if invoices %}
+
+    <div class="invoices-section">
+
+      <h2>Cartões</h2>
+
+      {% for invoice in invoices %}
+
+        <div class="invoice-card">
+
+          <div class="invoice-header">
+
+            <div>
+
+              <div class="invoice-name">
+                {{ invoice.name }}
+              </div>
+
+              <div class="invoice-status">
+
+                {% if invoice.estimated %}
+                  <span class="badge badge-warning">
+                    Previsão
+                  </span>
+                {% else %}
+                  <span class="badge badge-positive">
+                    Confirmada
+                  </span>
+                {% endif %}
+
+              </div>
+
+            </div>
+
+
+            <div class="invoice-value">
+
+              {{ invoice.amount | brl }}
+
+            </div>
+
+          </div>
+
+
+          <div class="invoice-actions">
+
+            <a
+              class="btn btn-small"
+              href="{{ url_for('edit_invoice', invoice_id=invoice.id) }}"
+            >
+              Alterar fatura
+            </a>
+
+          </div>
+
+
+          <div class="invoice-items">
+
+            {% for item in items %}
+
+              {% if item.invoice_id == invoice.id %}
+
+                <div class="invoice-item">
+
+                  <span>
+                    {{ item.name }}
+                  </span>
+
+                  <span>
+                    {{ item.amount | brl }}
+                  </span>
+
+                </div>
+
+              {% endif %}
+
+            {% endfor %}
+
+          </div>
+
+        </div>
+
+      {% endfor %}
+
+    </div>
+
+  {% endif %}
+
+
+  <!-- ===================================================== -->
+  <!-- ITENS                                                 -->
+  <!-- ===================================================== -->
+
+  <form
+    method="post"
+    action="{{ url_for('bulk_replicate_select') }}"
+  >
+
+    <input
+      type="hidden"
+      name="origin_year"
+      value="{{ year }}"
+    >
+
+    <input
+      type="hidden"
+      name="origin_month"
+      value="{{ month }}"
+    >
+
+
     <table class="items-table">
+
       <thead>
+
         <tr>
-          <th><input type="checkbox" id="select-all" aria-label="Selecionar todas"></th>
+
+          <th>
+            <input
+              type="checkbox"
+              id="select-all"
+              aria-label="Selecionar todas"
+            >
+          </th>
+
           <th>Nome</th>
+
           <th>Tipo</th>
+
           <th>Valor</th>
+
           <th>Parcela</th>
-          <th></th>
+
+          <th>Cartão</th>
+
+          <th>Ações</th>
+
         </tr>
+
       </thead>
+
+
       <tbody>
+
         {% for item in items %}
-          <tr>
-            <td><input type="checkbox" name="item_ids" value="{{ item.id }}" class="item-checkbox"></td>
-            <td>{{ item.name }}</td>
-            <td>
-              {% if item.type == 'receber' %}
-                <span class="badge badge-positive">A receber</span>
-              {% elif item.type == 'fixa' %}
-                <span class="badge badge-fixed">Fixa</span>
-              {% else %}
-                <span class="badge badge-negative">Variável</span>
-              {% endif %}
-            </td>
-            <td class="{{ 'positive' if item.type == 'receber' else 'negative' }}">{{ item.amount | brl }}</td>
-            <td class="muted">
-              {% if item.installment_total %}
-                {{ item.installment_index }}/{{ item.installment_total }}
-              {% else %}
-                &mdash;
-              {% endif %}
-            </td>
-            <td class="row-actions">
-              <a class="btn btn-small" href="{{ url_for('edit_item', item_id=item.id) }}">Editar</a>
-              <button type="submit" formaction="{{ url_for('delete_item', item_id=item.id) }}" class="btn btn-small">Excluir</button>
-              {% if item.group_id %}
-                <button type="submit" formaction="{{ url_for('delete_future_installments', item_id=item.id) }}" class="btn btn-small">Excluir futuras</button>
-              {% endif %}
-            </td>
-          </tr>
+
+          {% if not item.is_invoice %}
+
+            <tr>
+
+              <td>
+
+                <input
+                  type="checkbox"
+                  name="item_ids"
+                  value="{{ item.id }}"
+                  class="item-checkbox"
+                >
+
+              </td>
+
+
+              <td>
+
+                <div>
+                  {{ item.name }}
+                </div>
+
+
+                {% if item.link %}
+
+                  <div class="purchase-link">
+
+                    <a
+                      href="{{ item.link }}"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="btn btn-small"
+                    >
+                      Comprar
+                    </a>
+
+                  </div>
+
+                {% endif %}
+
+
+                {% if item.invoice_id %}
+
+                  <div class="item-invoice-info">
+
+                    Incluído na
+                    {{ item.invoice_name }}
+
+                  </div>
+
+                {% endif %}
+
+              </td>
+
+
+              <td>
+
+                {% if item.type == 'receber' %}
+
+                  <span class="badge badge-positive">
+                    A receber
+                  </span>
+
+                {% elif item.type == 'fixa' %}
+
+                  <span class="badge badge-fixed">
+                    Fixa
+                  </span>
+
+                {% else %}
+
+                  <span class="badge badge-negative">
+                    Variável
+                  </span>
+
+                {% endif %}
+
+              </td>
+
+
+              <td
+                class="{{ 'positive' if item.type == 'receber' else 'negative' }}"
+              >
+
+                {{ item.amount | brl }}
+
+              </td>
+
+
+              <td class="muted">
+
+                {% if item.installment_total %}
+
+                  {{ item.installment_index }}/{{ item.installment_total }}
+
+                {% else %}
+
+                  &mdash;
+
+                {% endif %}
+
+              </td>
+
+
+              <td>
+
+                {% if item.card_name %}
+
+                  <span class="badge badge-card">
+                    {{ item.card_name }}
+                  </span>
+
+                {% else %}
+
+                  &mdash;
+
+                {% endif %}
+
+              </td>
+
+
+              <td class="row-actions">
+
+                <a
+                  class="btn btn-small"
+                  href="{{ url_for('edit_item', item_id=item.id) }}"
+                >
+                  Editar
+                </a>
+
+
+                <button
+                  type="submit"
+                  formaction="{{ url_for('delete_item', item_id=item.id) }}"
+                  class="btn btn-small"
+                >
+                  Excluir
+                </button>
+
+
+                {% if item.group_id %}
+
+                  <button
+                    type="submit"
+                    formaction="{{ url_for('delete_future_installments', item_id=item.id) }}"
+                    class="btn btn-small"
+                  >
+                    Excluir futuras
+                  </button>
+
+                {% endif %}
+
+              </td>
+
+            </tr>
+
+          {% endif %}
+
         {% else %}
+
           <tr>
-            <td colspan="6" class="empty-row">Nenhum item cadastrado neste mês ainda.</td>
+
+            <td
+              colspan="7"
+              class="empty-row"
+            >
+              Nenhum item cadastrado neste mês ainda.
+            </td>
+
           </tr>
+
         {% endfor %}
+
       </tbody>
+
     </table>
-    <button type="submit" class="btn btn-small bulk-action-btn">Replicar selecionadas</button>
+
+
+    <button
+      type="submit"
+      class="btn btn-small bulk-action-btn"
+    >
+      Replicar selecionadas
+    </button>
+
   </form>
 
+
+  <!-- ===================================================== -->
+  <!-- TOTAIS                                                -->
+  <!-- ===================================================== -->
+
   <div class="totals-bar">
-    <div><span class="label">Total fixas</span><span class="value negative">{{ totals.fixa | brl }}</span></div>
-    <div><span class="label">Total variáveis</span><span class="value negative">{{ totals.variavel | brl }}</span></div>
-    <div><span class="label">Total a receber</span><span class="value positive">{{ totals.receber | brl }}</span></div>
-    <div><span class="label">Saldo</span><span class="value">{{ totals.saldo | brl }}</span></div>
+
+    <div>
+
+      <span class="label">
+        Total fixas
+      </span>
+
+      <span class="value negative">
+        {{ totals.fixa | brl }}
+      </span>
+
+    </div>
+
+
+    <div>
+
+      <span class="label">
+        Total variáveis
+      </span>
+
+      <span class="value negative">
+        {{ totals.variavel | brl }}
+      </span>
+
+    </div>
+
+
+    <div>
+
+      <span class="label">
+        Total a receber
+      </span>
+
+      <span class="value positive">
+        {{ totals.receber | brl }}
+      </span>
+
+    </div>
+
+
+    <div>
+
+      <span class="label">
+        Saldo
+      </span>
+
+      <span class="value">
+        {{ totals.saldo | brl }}
+      </span>
+
+    </div>
+
   </div>
+
+
+  <!-- ===================================================== -->
+  <!-- NOVO ITEM                                             -->
+  <!-- ===================================================== -->
 
   <div class="add-form-card">
+
     <h2>Adicionar item</h2>
-    <form method="post" action="{{ url_for('new_item', year=year, month=month) }}" class="add-form">
+
+
+    <form
+      method="post"
+      action="{{ url_for('new_item', year=year, month=month) }}"
+      class="add-form"
+    >
+
       <div class="form-row">
-        <label for="name">Nome</label>
-        <input type="text" id="name" name="name" placeholder="Ex: Conta de luz" required>
+
+        <label for="name">
+          Nome
+        </label>
+
+        <input
+          type="text"
+          id="name"
+          name="name"
+          placeholder="Ex: Conta de luz"
+          required
+        >
+
       </div>
+
+
       <div class="form-row">
-        <label for="type">Tipo</label>
-        <select id="type" name="type">
-          <option value="fixa">Conta fixa</option>
-          <option value="variavel">Conta variável</option>
-          <option value="receber">A receber</option>
+
+        <label for="type">
+          Tipo
+        </label>
+
+        <select
+          id="type"
+          name="type"
+        >
+
+          <option value="fixa">
+            Conta fixa
+          </option>
+
+          <option value="variavel">
+            Conta variável
+          </option>
+
+          <option value="receber">
+            A receber
+          </option>
+
         </select>
+
       </div>
+
+
       <div class="form-row">
-        <label for="amount">Valor</label>
-        <input type="text" id="amount" name="amount" placeholder="0,00" required>
+
+        <label for="amount">
+          Valor
+        </label>
+
+        <input
+          type="text"
+          id="amount"
+          name="amount"
+          placeholder="0,00"
+          required
+        >
+
       </div>
+
+
+      <div class="form-row">
+
+        <label for="link">
+          Link da compra
+        </label>
+
+        <input
+          type="text"
+          id="link"
+          name="link"
+          placeholder="https://..."
+        >
+
+        <span class="hint">
+          Opcional. Um botão "Comprar" aparecerá no lançamento.
+        </span>
+
+      </div>
+
+
       <div class="form-row checkbox-row">
-        <input type="checkbox" id="parcelado" name="parcelado" onclick="document.getElementById('parcelas-field').classList.toggle('hidden', !this.checked)">
-        <label for="parcelado">Parcelado</label>
+
+        <input
+          type="checkbox"
+          id="parcelado"
+          name="parcelado"
+        >
+
+        <label for="parcelado">
+          Parcelado
+        </label>
+
       </div>
-      <div class="form-row hidden" id="parcelas-field">
-        <label for="parcelas">Quantidade de parcelas</label>
-        <input type="number" id="parcelas" name="parcelas" min="2" value="2">
-        <span class="hint">O valor acima é considerado o valor de cada parcela e será lançado automaticamente nos próximos meses.</span>
+
+
+      <div
+        class="form-row hidden"
+        id="parcelas-field"
+      >
+
+        <label for="parcelas">
+          Quantidade de parcelas
+        </label>
+
+        <input
+          type="number"
+          id="parcelas"
+          name="parcelas"
+          min="2"
+          value="2"
+        >
+
+        <span class="hint">
+          O valor informado será o valor de cada parcela.
+        </span>
+
       </div>
-      <button type="submit" class="btn btn-primary">Adicionar</button>
+
+
+      <div
+        class="form-row hidden"
+        id="cartao-field"
+      >
+
+        <label for="card_id">
+          Cartão
+        </label>
+
+        <select
+          id="card_id"
+          name="card_id"
+        >
+
+          <option value="">
+            Nenhum cartão
+          </option>
+
+          {% for card in cards %}
+
+            <option value="{{ card.id }}">
+              {{ card.name }}
+            </option>
+
+          {% endfor %}
+
+        </select>
+
+        <span class="hint">
+          Ao escolher um cartão, a fatura será criada ou atualizada automaticamente.
+        </span>
+
+      </div>
+
+
+      <button
+        type="submit"
+        class="btn btn-primary"
+      >
+        Adicionar
+      </button>
+
     </form>
+
   </div>
 
+
+  <!-- ===================================================== -->
+  <!-- NOVO CARTÃO                                           -->
+  <!-- ===================================================== -->
+
+  <div class="add-form-card card-form">
+
+    <h2>Adicionar cartão</h2>
+
+    <form
+      method="post"
+      action="{{ url_for('new_card') }}"
+      class="add-form"
+    >
+
+      <div class="form-row">
+
+        <label for="card-name">
+          Nome do cartão
+        </label>
+
+        <input
+          type="text"
+          id="card-name"
+          name="name"
+          placeholder="Ex: Nubank"
+          required
+        >
+
+      </div>
+
+
+      <button
+        type="submit"
+        class="btn"
+      >
+        Adicionar cartão
+      </button>
+
+    </form>
+
+  </div>
+
+
   <script>
+
     (function () {
-      var typeSelect = document.getElementById('type');
-      var savedType = localStorage.getItem('ultimoTipoConta');
+
+      var typeSelect =
+        document.getElementById('type');
+
+      var savedType =
+        localStorage.getItem('ultimoTipoConta');
+
       if (savedType) {
         typeSelect.value = savedType;
       }
-      typeSelect.addEventListener('change', function () {
-        localStorage.setItem('ultimoTipoConta', typeSelect.value);
-      });
+
+      typeSelect.addEventListener(
+        'change',
+        function () {
+
+          localStorage.setItem(
+            'ultimoTipoConta',
+            typeSelect.value
+          );
+
+        }
+      );
+
     })();
 
+
     (function () {
-      var selectAll = document.getElementById('select-all');
-      if (!selectAll) return;
-      var checkboxes = document.querySelectorAll('.item-checkbox');
-      selectAll.addEventListener('change', function () {
-        checkboxes.forEach(function (cb) { cb.checked = selectAll.checked; });
-      });
+
+      var selectAll =
+        document.getElementById('select-all');
+
+      if (!selectAll) {
+        return;
+      }
+
+      var checkboxes =
+        document.querySelectorAll(
+          '.item-checkbox'
+        );
+
+      selectAll.addEventListener(
+        'change',
+        function () {
+
+          checkboxes.forEach(
+            function (checkbox) {
+
+              checkbox.checked =
+                selectAll.checked;
+
+            }
+          );
+
+        }
+      );
+
     })();
+
+
+    (function () {
+
+      var parcelado =
+        document.getElementById(
+          'parcelado'
+        );
+
+      var parcelasField =
+        document.getElementById(
+          'parcelas-field'
+        );
+
+      var cartaoField =
+        document.getElementById(
+          'cartao-field'
+        );
+
+
+      function updateParcelamento() {
+
+        var enabled =
+          parcelado.checked;
+
+        parcelasField.classList.toggle(
+          'hidden',
+          !enabled
+        );
+
+        cartaoField.classList.toggle(
+          'hidden',
+          !enabled
+        );
+
+      }
+
+
+      parcelado.addEventListener(
+        'change',
+        updateParcelamento
+      );
+
+      updateParcelamento();
+
+    })();
+
   </script>
+
 {% endblock %}
