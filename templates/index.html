@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ year }} · Planejador Financeiro{% endblock %}
+{% block content %}
+  <div class="year-nav">
+    <a class="btn btn-icon" href="{{ url_for('index', ano=year - 1) }}" aria-label="Ano anterior">&#8592;</a>
+    <h1>{{ year }}</h1>
+    <a class="btn btn-icon" href="{{ url_for('index', ano=year + 1) }}" aria-label="Próximo ano">&#8594;</a>
+  </div>
+
+  <div class="card-grid">
+    {% for m in months %}
+      <a class="month-card" href="{{ url_for('month_view', year=year, month=m.month) }}">
+        <div class="month-card-name">{{ m.name }}</div>
+        <div class="month-card-row">
+          <span class="label">Fixas</span>
+          <span class="value negative">{{ m.totals.fixa | brl }}</span>
+        </div>
+        <div class="month-card-row">
+          <span class="label">Variáveis</span>
+          <span class="value negative">{{ m.totals.variavel | brl }}</span>
+        </div>
+        <div class="month-card-row">
+          <span class="label">A receber</span>
+          <span class="value positive">{{ m.totals.receber | brl }}</span>
+        </div>
+        <div class="month-card-total">{{ m.totals.saldo | brl }}</div>
+      </a>
+    {% endfor %}
+  </div>
+{% endblock %}

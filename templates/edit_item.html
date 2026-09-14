@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Editar item{% endblock %}
+{% block content %}
+  <div class="month-header">
+    <a class="back-link" href="{{ url_for('month_view', year=item.year, month=item.month) }}">&#8592; Voltar</a>
+    <h1>Editar item</h1>
+  </div>
+
+  <div class="add-form-card">
+    <form method="post" class="add-form">
+      <div class="form-row">
+        <label for="name">Nome</label>
+        <input type="text" id="name" name="name" value="{{ item.name }}" required>
+      </div>
+      <div class="form-row">
+        <label for="type">Tipo</label>
+        <select id="type" name="type">
+          <option value="fixa" {{ 'selected' if item.type == 'fixa' else '' }}>Conta fixa</option>
+          <option value="variavel" {{ 'selected' if item.type == 'variavel' else '' }}>Conta variável</option>
+          <option value="receber" {{ 'selected' if item.type == 'receber' else '' }}>A receber</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label for="amount">Valor</label>
+        <input type="text" id="amount" name="amount" value="{{ '%.2f' | format(item.amount) }}" required>
+      </div>
+      {% if item.installment_total %}
+        <p class="hint">Parcela {{ item.installment_index }} de {{ item.installment_total }}. Editar aqui altera apenas esta parcela.</p>
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Salvar</button>
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Replicar contas selecionadas{% endblock %}
+{% block content %}
+  <div class="month-header">
+    <a class="back-link" href="{{ url_for('month_view', year=origin_year, month=origin_month) }}">&#8592; Voltar</a>
+    <h1>Replicar {{ items|length }} conta(s)</h1>
+  </div>
+
+  <div class="add-form-card">
+    <p class="hint">
+      Selecionadas: {{ items|map(attribute='name')|join(', ') }}.
+      Escolha o ano e marque quantos meses quiser — cada mês marcado recebe uma
+      cópia independente de cada conta selecionada.
+    </p>
+    <form method="post" action="{{ url_for('bulk_replicate_confirm') }}" class="add-form">
+      {% for item in items %}
+        <input type="hidden" name="item_ids" value="{{ item.id }}">
+      {% endfor %}
+      <input type="hidden" name="origin_year" value="{{ origin_year }}">
+      <input type="hidden" name="origin_month" value="{{ origin_month }}">
+
+      <div class="form-row">
+        <label for="target_year">Ano de destino</label>
+        <input type="number" id="target_year" name="target_year" value="{{ origin_year }}">
+      </div>
+
+      <div class="form-row">
+        <label>Meses de destino</label>
+        <div class="month-checkboxes">
+          {% for m, name in month_options %}
+            <label class="month-checkbox">
+              <input type="checkbox" name="target_months" value="{{ m }}">
+              {{ name }}
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Replicar</button>
+    </form>
+  </div>
+{% endblock %}
