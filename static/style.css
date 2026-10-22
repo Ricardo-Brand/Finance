@@ -186,6 +186,44 @@ body {
 }
 
 /* ============================================================
+   RECEBIMENTO DO MÊS
+   ============================================================ */
+
+.income-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 28px;
+}
+
+.income-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.income-prefix {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--positive);
+}
+
+.income-row input {
+  width: 160px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--positive);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ============================================================
    STATUS DE PAGAMENTO
    ============================================================ */
 
@@ -261,6 +299,28 @@ body {
 
 .status-button:hover {
   opacity: 0.8;
+}
+
+.items-section {
+  margin-bottom: 8px;
+}
+
+.items-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 24px 0 10px;
+}
+
+.items-section-header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.items-section-total {
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .items-table {

@@ -106,6 +106,21 @@ def init_db():
     )
 
     # --------------------------------------------------------
+    # Quanto vou receber em cada mês
+    # --------------------------------------------------------
+
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS month_income (
+            year INTEGER NOT NULL,
+            month INTEGER NOT NULL,
+            amount REAL NOT NULL,
+            PRIMARY KEY (year, month)
+        )
+        """
+    )
+
+    # --------------------------------------------------------
     # Migração de items existentes
     # --------------------------------------------------------
 
@@ -232,6 +247,38 @@ def parse_amount(value):
 
     except (TypeError, ValueError):
         return 0.0
+
+
+# ============================================================
+# RECEBIMENTO DO MÊS
+# ============================================================
+
+def get_month_income(year, month):
+    """
+    Retorna o quanto será recebido no mês.
+
+    Retorna None quando o valor ainda não foi informado.
+    """
+
+    db = get_db()
+
+    row = db.execute(
+        """
+        SELECT amount
+        FROM month_income
+        WHERE year = ?
+          AND month = ?
+        """,
+        (
+            year,
+            month,
+        ),
+    ).fetchone()
+
+    if row is None:
+        return None
+
+    return float(row["amount"] or 0)
 
 
 # ============================================================
@@ -698,36 +745,54 @@ def month_totals(year, month):
         month,
     )
 
-    # --------------------------------------------------------
-    # Faturas entram no cálculo.
-    #
-    # Itens vinculados a uma fatura não entram novamente,
-    # porque já estão representados no valor da fatura.
-    # --------------------------------------------------------
+    fixa = 0
+    variavel = 0
+    receber = 0
+    linked_by_invoice = {}
+    invoices = []
 
-    contabilizados = [
-        row
-        for row in rows
-        if row["invoice_id"] is None
-    ]
+    for row in rows:
+        amount = float(row["amount"] or 0)
 
-    fixa = sum(
-        row["amount"]
-        for row in contabilizados
-        if row["type"] == "fixa"
-    )
+        # Faturas são tratadas depois: o valor delas só
+        # entra no total se sobrar algo além das compras
+        # vinculadas. Assim o tipo de cada item (fixa /
+        # variável) vale mesmo depois de uma edição.
+        if row["is_invoice"]:
+            invoices.append(row)
+            continue
 
-    variavel = sum(
-        row["amount"]
-        for row in contabilizados
-        if row["type"] == "variavel"
-    )
+        if row["type"] == "fixa":
+            fixa += amount
 
-    receber = sum(
-        row["amount"]
-        for row in contabilizados
-        if row["type"] == "receber"
-    )
+        elif row["type"] == "variavel":
+            variavel += amount
+
+        elif row["type"] == "receber":
+            receber += amount
+
+        invoice_id = row["invoice_id"]
+
+        if invoice_id is not None:
+            linked_by_invoice[invoice_id] = (
+                linked_by_invoice.get(invoice_id, 0)
+                + amount
+            )
+
+    for invoice in invoices:
+        leftover = float(invoice["amount"] or 0) - (
+            linked_by_invoice.get(invoice["id"], 0)
+        )
+
+        if leftover <= 0:
+            continue
+
+        if invoice["type"] == "variavel":
+            variavel += leftover
+        elif invoice["type"] == "receber":
+            receber += leftover
+        else:
+            fixa += leftover
 
     despesas = fixa + variavel
 
@@ -739,6 +804,36 @@ def month_totals(year, month):
         "saldo": despesas - receber,
     }
 
+
+def group_month_items(items):
+    groups = {
+        "comprar": [],
+        "fixa": [],
+        "variavel": [],
+        "receber": [],
+    }
+
+    for item in items:
+        if item["is_invoice"]:
+            continue
+
+        link = (item["link"] or "").strip()
+
+        if link:
+            groups["comprar"].append(item)
+            continue
+
+        item_type = item["type"]
+
+        if item_type in groups:
+            groups[item_type].append(item)
+
+    section_totals = {
+        key: sum(float(row["amount"] or 0) for row in rows)
+        for key, rows in groups.items()
+    }
+
+    return groups, section_totals
 
 # ============================================================
 # INDEX
@@ -812,16 +907,100 @@ def month_view(year, month):
         month,
     )
 
+    item_groups, section_totals = group_month_items(items)
+
+    income = get_month_income(
+        year,
+        month,
+    )
+
+    # A receber - total = o quanto irá sobrar.
+    sobra = None
+
+    if income is not None:
+        sobra = income - totals["saldo"]
+
     return render_template(
         "month.html",
         year=year,
         month=month,
         month_name=month_name(month),
+        income=income,
+        sobra=sobra,
         items=items,
+        item_groups=item_groups,
+        section_totals=section_totals,
         invoices=invoices,
         cards=cards,
         totals=totals,
         payment_status=payment_status,
+    )
+
+
+# ============================================================
+# RECEBIMENTO DO MÊS
+# ============================================================
+
+@app.route(
+    "/mes/<int:year>/<int:month>/recebimento",
+    methods=["POST"],
+)
+def set_month_income(year, month):
+    if month < 1 or month > 12:
+        abort(404)
+
+    raw_amount = (
+        request.form.get("amount") or ""
+    ).strip()
+
+    db = get_db()
+
+    # Campo vazio remove o valor informado.
+    if not raw_amount:
+        db.execute(
+            """
+            DELETE FROM month_income
+            WHERE year = ?
+              AND month = ?
+            """,
+            (
+                year,
+                month,
+            ),
+        )
+
+    else:
+        amount = max(
+            0,
+            parse_amount(raw_amount),
+        )
+
+        db.execute(
+            """
+            INSERT INTO month_income (
+                year,
+                month,
+                amount
+            )
+            VALUES (?, ?, ?)
+            ON CONFLICT(year, month)
+            DO UPDATE SET amount = excluded.amount
+            """,
+            (
+                year,
+                month,
+                amount,
+            ),
+        )
+
+    db.commit()
+
+    return redirect(
+        url_for(
+            "month_view",
+            year=year,
+            month=month,
+        )
     )
 
 
@@ -1080,6 +1259,21 @@ def toggle_item_paid(item_id):
 
     db.commit()
 
+    # Requisição AJAX: retorna os dados sem recarregar a página.
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        status = month_payment_status(
+            item["year"],
+            item["month"],
+        )
+
+        return {
+            "success": True,
+            "item_id": item_id,
+            "paid": bool(new_paid),
+            "month_paid": status["paid"],
+        }
+
+    # Mantém compatibilidade com requisições normais.
     return redirect(
         url_for(
             "month_view",
@@ -1216,6 +1410,9 @@ def edit_item(item_id):
             or "variavel"
         )
 
+        if type_ not in ("fixa", "variavel", "receber"):
+            type_ = "variavel"
+
         amount = parse_amount(
             request.form.get("amount")
         )
@@ -1296,11 +1493,23 @@ def edit_item(item_id):
 
         db.commit()
 
+        # Busca novamente o item após a alteração.
+        # Isso garante que qualquer cálculo posterior
+        # utilize o tipo realmente salvo no banco.
+        updated_item = db.execute(
+            """
+            SELECT *
+            FROM items
+            WHERE id = ?
+            """,
+            (item_id,),
+        ).fetchone()
+
         return redirect(
             url_for(
                 "month_view",
-                year=item["year"],
-                month=item["month"],
+                year=updated_item["year"],
+                month=updated_item["month"],
             )
         )
 
@@ -1876,6 +2085,6 @@ if __name__ == "__main__":
 
     app.run(
         host="127.0.0.1",
-        port=8080,
+        port=8082,
         debug=True,
     )
